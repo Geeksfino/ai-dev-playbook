@@ -22,10 +22,17 @@ becomes relevant when manual prompting is the bottleneck.
 
 **Does CLAUDE.md work with Cursor / Windsurf / other editors?**
 
-The behavioral rules in CLAUDE.md work with any agent that accepts a system-level
-instruction file. For Cursor, copy the contents into `.cursor/rules/playbook.mdc`.
-For other editors, check their documentation for the equivalent configuration file.
-The loop skill is Claude Code-specific.
+Yes. The behavioral rules work with any agent that accepts persistent system-level
+instructions.
+
+- **Cursor:** copy into `.cursor/rules/playbook.mdc` with `alwaysApply: true`
+- **Claude Code:** place `CLAUDE.md` in the project root
+- **Codex:** copy into `AGENTS.md` or project instructions
+- **Other tools:** check their docs for the equivalent configuration file
+
+The loop-engineering skill is a `SKILL.md` file that works in Cursor
+(`.cursor/skills/`), Claude Code (`.claude/skills/`), or Codex's skill directory.
+The loop logic is tool-agnostic; only paths and invocation syntax differ.
 
 ---
 
@@ -34,7 +41,7 @@ The loop skill is Claude Code-specific.
 CLAUDE.md's §2 (Think Before You Code) adds a clarification step before
 implementation. For a one-line fix this adds a small amount of friction.
 For a multi-file architectural change it saves hours. If the friction bothers
-you on simple tasks, you can tell Claude to skip clarification: "just do it"
+you on simple tasks, you can tell the agent to skip clarification: "just do it"
 overrides the rule in practice.
 
 ---
@@ -53,14 +60,15 @@ The Nodding Loop is the most common failure mode. Causes:
 
 1. The evaluator agent doesn't have separate instructions — it's the same agent
    re-reading its own output. Fix: use the template in
-   `templates/evaluator-agent/loop-reviewer.md` as a separate `.claude/agents/`
-   file.
+   `templates/evaluator-agent/loop-reviewer.md` as a separate evaluator config
+   (Cursor: project agent config; Claude Code: `.claude/agents/`).
 
 2. The evaluator reads code instead of executing it. Fix: the evaluator template
    explicitly requires running tests and pasting actual output.
 
 3. The stop condition is checked by the same model that did the work. Fix: use
-   Claude Code's `/goal` command, which uses a fresh model to check the condition.
+   a separate evaluation turn, or Claude Code's `/goal` command, which uses a
+   fresh model to check the condition.
 
 If your evaluator has never produced a REJECT in more than 50 turns on a real
 codebase, it is not functioning.
@@ -72,6 +80,8 @@ codebase, it is not functioning.
 - **GitHub Actions:** Cancel the workflow run from the Actions tab. The workflow
   has a 30-minute `timeout-minutes` ceiling as a safety net.
 - **Claude Code `/loop`:** Type `/stop` or close the session.
+- **Cursor Automations / custom schedules:** Cancel the run from the relevant UI
+  or workflow.
 - **Worktrees:** Each finding runs in an isolated worktree. Even if one agent
   goes wrong, it cannot affect other worktrees or the main branch (PRs are never
   auto-merged).
@@ -83,21 +93,28 @@ do. Read it before deploying and make sure it matches your project's risk tolera
 
 **Should I commit CLAUDE.md to the repo?**
 
-Yes, if you want the rules to apply for everyone on the team using Claude Code.
+Yes, if you want the rules to apply for everyone on the team using an AI agent.
 The file is project-level configuration, not personal preference.
 
-If you have personal rules that only apply to you, put them in
-`~/.claude/CLAUDE.md` (user-level) rather than the project root.
+If you have personal rules that only apply to you, put them in user-level config
+(e.g. `~/.claude/CLAUDE.md` or Cursor user rules) rather than the project root.
 
 ---
 
 **Will these files become outdated as models improve?**
 
 CLAUDE.md will need less over time as models internalize these behaviors more
-reliably. The loop-engineering skill will evolve as Claude Code's primitives
-change (`/goal`, `/loop`, worktrees). Watch the repo for updates.
+reliably. The loop-engineering skill will evolve as agent tooling primitives
+change (`/goal`, `/loop`, worktrees, Cursor Automations, etc.). Watch the repo
+for updates.
 
 The underlying principles — separate generator from evaluator, persist state
 outside the context window, don't skip verification — are unlikely to become
 wrong. The implementation details (specific commands, file locations) will
 change with tooling updates.
+
+---
+
+**中文文档**
+
+See [docs/zh/README.md](zh/README.md) for the full Chinese documentation.

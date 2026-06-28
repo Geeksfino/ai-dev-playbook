@@ -100,3 +100,7 @@ The `Stop` section in the loop-triage template is the one section that must neve
 be removed. It encodes the boundary between what the loop does autonomously and what
 requires a human. The IEEE paper calls this "the open door" — the checkpoint that
 keeps a human capable of saying no to a machine built to say yes at speed.
+
+---
+
+**中文文档:** [docs/zh/why-these-exist.md](zh/why-these-exist.md)

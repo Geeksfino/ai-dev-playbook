@@ -5,17 +5,21 @@ Use this to make informed decisions about what to include in tight-context-budge
 
 ---
 
-## How Claude Code loads files
+## How agents load these files
 
-`CLAUDE.md` is read once at session start and included in the system prompt for the
-entire session. It does not get re-sent with every message — it's a fixed overhead
-per session, amortized across all turns.
+**Harness layer (`CLAUDE.md` or equivalent)** is read once at session start and
+included in the system prompt for the entire session. It does not get re-sent with
+every message — it's a fixed overhead per session, amortized across all turns.
 
-Skills (SKILL.md files) are loaded when Claude determines the skill is relevant to
-the current task. Reference files inside a skill are loaded only when the skill
-body explicitly directs Claude to read them.
+- **Cursor:** rules in `.cursor/rules/*.mdc` with `alwaysApply: true`
+- **Claude Code:** `CLAUDE.md` in the project root
+- **Codex / others:** each tool's project-instruction mechanism
 
-Templates are never loaded by the model — they're files for humans to copy.
+**Skills (`SKILL.md` files)** are loaded when the agent determines the skill is
+relevant to the current task. Reference files inside a skill are loaded only when
+the skill body explicitly directs the agent to read them.
+
+**Templates** are never loaded by the model — they're files for humans to copy.
 
 ---
 
@@ -50,7 +54,7 @@ impact-per-token ratio and can be cut first.
 
 ### Loop engineering skill is already progressive
 
-The skill body (SKILL.md) directs Claude to load reference files only when needed.
+The skill body (SKILL.md) directs the agent to load reference files only when needed.
 You don't need to do anything — the progressive loading is already designed in.
 
 ### If context pressure is severe
@@ -68,9 +72,14 @@ For most projects, the token cost of these files is not a meaningful expense.
 
 The more relevant cost is **context window dilution**: in very long sessions with
 many large files already loaded, adding ~670 tokens (CLAUDE.md) or ~2,800 tokens
-(loop skill) competes for space with code context. If you notice Claude losing
+(loop skill) competes for space with code context. If you notice the agent losing
 track of earlier context in long sessions, consider:
 
 1. Starting a fresh session for loop setup tasks
 2. Removing reference files you've already acted on
-3. Using `/compact` to compress conversation history before loading large files
+3. Using your tool's compaction feature (e.g. Claude Code's `/compact`) to compress
+   conversation history before loading large files
+
+---
+
+**中文文档:** [docs/zh/token-costs.md](zh/token-costs.md)
