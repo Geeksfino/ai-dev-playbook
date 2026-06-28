@@ -1,3 +1,5 @@
+> [English](../../README.md) · **中文**
+
 # AI Dev Playbook
 
 面向 AI 辅助软件开发的两个互补层次：**Harness（约束层）** 控制单次 Agent 运行的行为，**Loop（循环层）** 技能在你需要时搭建自动化 Agent 系统。

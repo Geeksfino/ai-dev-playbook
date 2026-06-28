@@ -1,3 +1,5 @@
+> **English** · [中文](docs/zh/README.md)
+
 # AI Dev Playbook
 
 Two complementary layers for AI-assisted software development: a **harness** that governs how a single agent run behaves, and a **loop** skill that scaffolds automated agent systems when you need them.
