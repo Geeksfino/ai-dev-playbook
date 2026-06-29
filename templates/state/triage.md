@@ -1,3 +1,7 @@
+# TEMPLATE — copy this file to: state/triage.md
+# Commit it to your repo so the loop can read and write across runs.
+# See README.md → Templates for the full install sequence.
+
 # Loop State — Triage
 
 _Updated automatically by the loop-triage skill. Do not edit manually._

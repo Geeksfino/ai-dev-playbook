@@ -8,9 +8,10 @@ description: >
   request to make Claude Code or Codex run autonomously on a schedule or goal. Also trigger
   when a developer describes wanting agents to find work, fix bugs, open PRs, or run
   verification without manual prompting. This skill produces concrete, project-specific
-  artifacts: a SKILL.md for discovery, a state file template, a GitHub Actions schedule,
-  evaluator agent config, and a first-loop checklist. Do not just explain the concept —
-  scaffold the actual files.
+  artifacts: a discovery skill (SKILL.md installed to the project's loop-triage skill path),
+  a state file (state/triage.md), a GitHub Actions schedule, an evaluator agent config,
+  and a first-loop checklist. Do not just explain the concept — scaffold the actual files
+  with their correct destination paths for the developer's toolchain.
 ---
 
 # Loop Engineering Skill

@@ -1,3 +1,7 @@
+# TEMPLATE — copy this file to: .github/workflows/loop-triage.yml
+# Add ANTHROPIC_API_KEY to your repository secrets before enabling.
+# See README.md → Templates for the full install sequence.
+
 name: Loop Triage
 
 # Runs the loop-triage skill on a schedule.

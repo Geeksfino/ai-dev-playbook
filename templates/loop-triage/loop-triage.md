@@ -1,3 +1,9 @@
+# TEMPLATE — copy this file to your loop-triage skill path as SKILL.md:
+#   Cursor:      .cursor/skills/loop-triage/SKILL.md
+#   Claude Code: .claude/skills/loop-triage/SKILL.md
+# Edit all sections marked CUSTOMIZE before committing.
+# See README.md → Templates for the full install sequence.
+
 ---
 name: loop-triage
 trigger: invoked by daily automation or on-demand

@@ -61,6 +61,25 @@ loop-engineering 生成的 **Artifact 1（triage `SKILL.md`）** 本身也是一
 
 ---
 
+## 选哪条路径？
+
+```
+第一次使用 AI 编程 Agent？
+└── 仅从 Harness 层开始——暂时不需要其他文件
+
+每天早上还在手动处理 CI 失败和 open issue？
+└── 安装 loop-engineering 技能
+   Agent 会引导你完成 7 问访谈，并为项目生成定制化的循环文件
+
+已明确项目的分拣规则和停止条件？
+└── 直接复制模板，自行编辑 CUSTOMIZE 标记
+   比访谈更快；无需交互式搭建
+```
+
+技能路径与模板路径会在项目中生成相同文件、放在相同位置。技能路径有引导且贴合项目；模板路径更快，但自定义工作由你承担。
+
+---
+
 ## 安装
 
 ### Harness 层 — 始终生效的 Agent 行为
@@ -99,85 +118,94 @@ curl https://raw.githubusercontent.com/$REPO/main/CLAUDE.md >> CLAUDE.md
 
 ---
 
-### Loop 层 — 按需搭建循环
+### Loop 层 — 引导式搭建（技能路径）
+
+每个项目安装一次。相关时 Agent 会自动发现该技能。
 
 **Cursor：**
 
 ```bash
+BASE=https://raw.githubusercontent.com/$REPO/main
 mkdir -p .cursor/skills/loop-engineering/references
 
 curl -o .cursor/skills/loop-engineering/SKILL.md \
-  https://raw.githubusercontent.com/$REPO/main/skills/loop-engineering/SKILL.md
+  $BASE/skills/loop-engineering/SKILL.md
 
 for f in five-moves failure-modes toolchain-map; do
   curl -o .cursor/skills/loop-engineering/references/$f.md \
-    https://raw.githubusercontent.com/$REPO/main/skills/loop-engineering/references/$f.md
+    $BASE/skills/loop-engineering/references/$f.md
 done
 ```
-
-然后向 Agent 说：**「帮我为这个项目搭建一个 loop」**，技能会接管后续流程。
 
 **Claude Code：**
 
 ```bash
+BASE=https://raw.githubusercontent.com/$REPO/main
 mkdir -p .claude/skills/loop-engineering/references
 
 curl -o .claude/skills/loop-engineering/SKILL.md \
-  https://raw.githubusercontent.com/$REPO/main/skills/loop-engineering/SKILL.md
+  $BASE/skills/loop-engineering/SKILL.md
 
 for f in five-moves failure-modes toolchain-map; do
   curl -o .claude/skills/loop-engineering/references/$f.md \
-    https://raw.githubusercontent.com/$REPO/main/skills/loop-engineering/references/$f.md
+    $BASE/skills/loop-engineering/references/$f.md
 done
 ```
 
 **Codex** — 同样的 `SKILL.md` 与 references；放入 Codex 技能目录，通过 `$loop-engineering` 调用。
 
+然后向 Agent 说：**「帮我为这个项目搭建一个 loop」**
+
+技能会进行 7 问访谈（触发源、停止条件、工具链、调度偏好、预算上限、PR 还是 inbox、现有 harness 规则）。访谈结束后生成五个循环文件的定制版本，并说明各自应放置的位置。
+
 ---
 
-### 模板 — 跳过访谈
+### 模板 — 直接复制（模板路径）
 
-若已明确需求、不需要交互式搭建：
+若已明确需求，可直接复制模板。每个模板文件顶部有 `# TEMPLATE — copy this file to:` 说明在项目中的目标路径。
+
+**文件对应关系：**
+
+| 模板文件 | 项目中的目标路径 | 用途 |
+|---|---|---|
+| `templates/loop-triage/loop-triage.md` | `.cursor/skills/loop-triage/SKILL.md` 或 `.claude/skills/loop-triage/SKILL.md` | 发现技能 — 读取 CI/issue，写入状态文件 |
+| `templates/evaluator-agent/loop-reviewer.md` | `.claude/agents/loop-reviewer.md`（或你工具的 agent 配置） | 对抗式评审 — 拒绝劣质输出 |
+| `templates/state/triage.md` | `state/triage.md` | 循环记忆 — 跨运行持久化发现项 |
+| `templates/inbox/.gitkeep` | `inbox/.gitkeep` | 人工审核队列 — Agent 不会单独处理的发现项 |
+| `templates/github-actions/loop-triage.yml` | `.github/workflows/loop-triage.yml` | 调度 — 无需本机在线的 cron 运行 |
+
+**安装顺序很重要。** 请按此顺序操作，否则循环没有可读的状态：
 
 ```bash
-# 发现技能（Artifact 1 — 路径按你的工具调整）
-mkdir -p .cursor/skills/loop-triage   # 或 .claude/skills/loop-triage
-curl -o .cursor/skills/loop-triage/SKILL.md \
-  https://raw.githubusercontent.com/$REPO/main/templates/loop-triage/SKILL.md
+BASE=https://raw.githubusercontent.com/$REPO/main
+SKILL_DIR=.cursor/skills/loop-triage   # 或 .claude/skills/loop-triage
+AGENT_DIR=.claude/agents               # 或 .codex/agents/
 
-# 评估 Agent
-mkdir -p .claude/agents               # 或 .codex/agents/
-curl -o .claude/agents/loop-reviewer.md \
-  https://raw.githubusercontent.com/$REPO/main/templates/evaluator-agent/loop-reviewer.md
-
-# 状态文件与收件箱
+# 步骤 1 — 状态文件与 inbox（循环记忆；首次运行前必须存在）
 mkdir -p state inbox
-curl -o state/triage.md \
-  https://raw.githubusercontent.com/$REPO/main/templates/state/triage.md
-touch inbox/.gitkeep
+curl -o state/triage.md $BASE/templates/state/triage.md
+curl -o inbox/.gitkeep $BASE/templates/inbox/.gitkeep
 
-# GitHub Actions 调度（与具体 Agent 工具无关）
+# 步骤 2 — 发现技能（读取 CI/issue；写入 state/triage.md）
+mkdir -p $SKILL_DIR
+curl -o $SKILL_DIR/SKILL.md $BASE/templates/loop-triage/loop-triage.md
+
+# 步骤 3 — 评估 Agent（每轮 Agent 运行后调用以验证输出）
+mkdir -p $AGENT_DIR
+curl -o $AGENT_DIR/loop-reviewer.md $BASE/templates/evaluator-agent/loop-reviewer.md
+
+# 步骤 4 — 调度（触发循环；需先完成步骤 1–3）
 mkdir -p .github/workflows
-curl -o .github/workflows/loop-triage.yml \
-  https://raw.githubusercontent.com/$REPO/main/templates/github-actions/loop-triage.yml
+curl -o .github/workflows/loop-triage.yml $BASE/templates/github-actions/loop-triage.yml
 ```
 
-提交前请按项目修改各文件。
+**复制后、提交前请编辑：**
 
----
+- 你的 loop-triage `SKILL.md` — 找到所有 `<!-- CUSTOMIZE -->` 标记，替换为项目的实际分拣规则（标签名、优先级标准、必须进 inbox 的模块）
+- `.github/workflows/loop-triage.yml` — 按你的时区设置 cron，调整 `--max-tokens`，在仓库 secrets 中添加 `ANTHROPIC_API_KEY`
+- `state/triage.md` — 无需编辑；原样提交，供循环读取
 
-## 我需要哪些文件？
-
-```
-第一次使用 AI 编程 Agent？
-└── 是 → 仅从 Harness 层开始（CLAUDE.md 或 .cursor/rules/）
-
-每天早上还在手动处理 CI / Issue / PR？
-└── 是 → 添加 loop-engineering 技能
-
-希望 Agent 在你睡觉时自动运行、无需手动触发？
-└── 是 → 复制模板并按项目修改
-```
+评估 Agent（`loop-reviewer.md`）没有 CUSTOMIZE 标记——其指令是有意为之的硬性规定，不应削弱。
 
 ---
 

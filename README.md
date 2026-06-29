@@ -61,6 +61,28 @@ Set `REPO=Geeksfino/ai-dev-playbook` (or your fork) in the commands below.
 
 ---
 
+## Which path do you need?
+
+```
+New to AI coding agents?
+└── Start with the harness layer only — nothing else needed yet
+
+Spending your morning manually triaging CI failures and open issues?
+└── Install the loop-engineering skill
+   Your agent guides you through a 7-question interview and generates
+   customised versions of the loop files for your project
+
+Already know your project's triage rules and stop conditions?
+└── Copy the templates directly and edit the CUSTOMIZE markers yourself
+   Faster than the interview; no interactive setup required
+```
+
+Both the skill path and the template path produce the same files in the same
+locations inside your project. The skill path is guided and project-aware;
+the template path is faster but requires you to own the customisation.
+
+---
+
 ## Install
 
 ### Harness layer — always-on agent behavior
@@ -99,85 +121,103 @@ curl https://raw.githubusercontent.com/$REPO/main/CLAUDE.md >> CLAUDE.md
 
 ---
 
-### Loop layer — on-demand loop scaffolding
+### Loop layer — guided setup (skill path)
+
+Install once per project. Your agent discovers the skill automatically when relevant.
 
 **Cursor:**
 
 ```bash
+BASE=https://raw.githubusercontent.com/$REPO/main
 mkdir -p .cursor/skills/loop-engineering/references
 
 curl -o .cursor/skills/loop-engineering/SKILL.md \
-  https://raw.githubusercontent.com/$REPO/main/skills/loop-engineering/SKILL.md
+  $BASE/skills/loop-engineering/SKILL.md
 
 for f in five-moves failure-modes toolchain-map; do
   curl -o .cursor/skills/loop-engineering/references/$f.md \
-    https://raw.githubusercontent.com/$REPO/main/skills/loop-engineering/references/$f.md
+    $BASE/skills/loop-engineering/references/$f.md
 done
 ```
-
-Then ask your agent: **"help me set up a loop for this project"** and the skill takes over.
 
 **Claude Code:**
 
 ```bash
+BASE=https://raw.githubusercontent.com/$REPO/main
 mkdir -p .claude/skills/loop-engineering/references
 
 curl -o .claude/skills/loop-engineering/SKILL.md \
-  https://raw.githubusercontent.com/$REPO/main/skills/loop-engineering/SKILL.md
+  $BASE/skills/loop-engineering/SKILL.md
 
 for f in five-moves failure-modes toolchain-map; do
   curl -o .claude/skills/loop-engineering/references/$f.md \
-    https://raw.githubusercontent.com/$REPO/main/skills/loop-engineering/references/$f.md
+    $BASE/skills/loop-engineering/references/$f.md
 done
 ```
 
 **Codex** — same `SKILL.md` and references; place under your Codex skill directory and invoke with `$loop-engineering`.
 
+Then ask your agent: **"help me set up a loop for this project"**
+
+The skill runs a 7-question interview (trigger sources, stop conditions, toolchain,
+scheduling preference, budget ceiling, PR vs inbox behaviour, existing harness rules).
+After the interview it generates customised versions of the five loop files and tells
+you exactly where to place each one.
+
 ---
 
-### Templates — skip the interview
+### Templates — direct copy (template path)
 
-If you already know what you want and don't need the interactive setup:
+Use this instead of the skill if you already know what you want. Each template file
+has a `# TEMPLATE — copy this file to:` header with the destination path inside
+your project.
+
+**What goes where:**
+
+| Template file | Destination(s) in your project | Purpose |
+|---|---|---|
+| `templates/loop-triage/loop-triage.md` | `.cursor/skills/loop-triage/SKILL.md` or `.claude/skills/loop-triage/SKILL.md` | Discovery skill — reads CI/issues, writes state file |
+| `templates/evaluator-agent/loop-reviewer.md` | `.claude/agents/loop-reviewer.md` (or your tool's agent config) | Adversarial reviewer — says no to bad output |
+| `templates/state/triage.md` | `state/triage.md` | Loop memory — persists findings across runs |
+| `templates/inbox/.gitkeep` | `inbox/.gitkeep` | Human review queue — findings the agent won't act on alone |
+| `templates/github-actions/loop-triage.yml` | `.github/workflows/loop-triage.yml` | Schedule — runs the loop on a cron without the machine on |
+
+**Install order matters.** Set up in this sequence or the loop has nothing to read:
 
 ```bash
-# Discovery skill (Artifact 1 — adjust path for your tool)
-mkdir -p .cursor/skills/loop-triage   # or .claude/skills/loop-triage
-curl -o .cursor/skills/loop-triage/SKILL.md \
-  https://raw.githubusercontent.com/$REPO/main/templates/loop-triage/SKILL.md
+BASE=https://raw.githubusercontent.com/$REPO/main
+SKILL_DIR=.cursor/skills/loop-triage   # or .claude/skills/loop-triage
+AGENT_DIR=.claude/agents               # or .codex/agents/
 
-# Evaluator agent
-mkdir -p .claude/agents               # or .codex/agents/
-curl -o .claude/agents/loop-reviewer.md \
-  https://raw.githubusercontent.com/$REPO/main/templates/evaluator-agent/loop-reviewer.md
-
-# State file and inbox
+# Step 1 — state file and inbox (loop memory; must exist before first run)
 mkdir -p state inbox
-curl -o state/triage.md \
-  https://raw.githubusercontent.com/$REPO/main/templates/state/triage.md
-touch inbox/.gitkeep
+curl -o state/triage.md $BASE/templates/state/triage.md
+curl -o inbox/.gitkeep $BASE/templates/inbox/.gitkeep
 
-# GitHub Actions schedule (toolchain-agnostic)
+# Step 2 — discovery skill (reads CI/issues; writes to state/triage.md)
+mkdir -p $SKILL_DIR
+curl -o $SKILL_DIR/SKILL.md $BASE/templates/loop-triage/loop-triage.md
+
+# Step 3 — evaluator agent (invoked after each agent turn to verify output)
+mkdir -p $AGENT_DIR
+curl -o $AGENT_DIR/loop-reviewer.md $BASE/templates/evaluator-agent/loop-reviewer.md
+
+# Step 4 — schedule (triggers the loop; requires steps 1–3 to already be in place)
 mkdir -p .github/workflows
-curl -o .github/workflows/loop-triage.yml \
-  https://raw.githubusercontent.com/$REPO/main/templates/github-actions/loop-triage.yml
+curl -o .github/workflows/loop-triage.yml $BASE/templates/github-actions/loop-triage.yml
 ```
 
-Edit each file to match your project before committing.
+**After copying, edit these before committing:**
 
----
+- Your loop-triage `SKILL.md` — find all `<!-- CUSTOMIZE -->` markers and replace
+  with your project's actual triage rules (label names, priority criteria, modules
+  that always go to inbox)
+- `.github/workflows/loop-triage.yml` — set the cron schedule to your timezone,
+  adjust `--max-tokens`, add `ANTHROPIC_API_KEY` to your repo secrets
+- `state/triage.md` — no edits needed; commit as-is so the loop has a file to read
 
-## Which files do I need?
-
-```
-Are you using an AI coding agent for the first time?
-└── Yes → start with the harness layer only (CLAUDE.md or .cursor/rules/)
-
-Are you spending time each morning triaging CI / issues / PRs manually?
-└── Yes → add the loop-engineering skill
-
-Do you want agents running while you sleep without manual setup?
-└── Yes → copy the templates and edit them for your project
-```
+The evaluator agent (`loop-reviewer.md`) has no CUSTOMIZE markers — its
+instructions are intentionally opinionated and should not be weakened.
 
 ---
 

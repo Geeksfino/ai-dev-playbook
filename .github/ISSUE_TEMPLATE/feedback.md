@@ -9,7 +9,7 @@ labels: feedback
 
 - [ ] CLAUDE.md
 - [ ] skills/loop-engineering/SKILL.md
-- [ ] templates/loop-triage/SKILL.md
+- [ ] templates/loop-triage/loop-triage.md
 - [ ] templates/evaluator-agent/loop-reviewer.md
 - [ ] templates/github-actions/loop-triage.yml
 - [ ] docs/

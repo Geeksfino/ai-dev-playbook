@@ -1,3 +1,10 @@
+# TEMPLATE — copy this file to your evaluator agent path:
+#   Cursor:      project agent config (see README)
+#   Claude Code: .claude/agents/loop-reviewer.md
+#   Codex:       .codex/agents/loop-reviewer.md
+# No CUSTOMIZE markers — the evaluator instructions are intentionally opinionated.
+# See README.md → Templates for the full install sequence.
+
 ---
 name: loop-reviewer
 description: >
