@@ -7,11 +7,11 @@ description: >
   "design an agentic workflow", "loop engineering", "build a self-running agent", or any
   request to make Claude Code or Codex run autonomously on a schedule or goal. Also trigger
   when a developer describes wanting agents to find work, fix bugs, open PRs, or run
-  verification without manual prompting. This skill produces concrete, project-specific
-  artifacts: a discovery skill (SKILL.md installed to the project's loop-triage skill path),
-  a state file (state/triage.md), a GitHub Actions schedule, an evaluator agent config,
-  and a first-loop checklist. Do not just explain the concept — scaffold the actual files
-  with their correct destination paths for the developer's toolchain.
+  verification without manual prompting. This skill copies canonical templates from
+  templates/ (bundled with this skill), customizes them from a 7-question interview, and
+  writes the files to the correct paths in the developer's project. Do not paraphrase or
+  shorten template content — copy first, then customize only CUSTOMIZE markers and
+  interview-driven fields.
 ---
 
 # Loop Engineering Skill
@@ -19,9 +19,14 @@ description: >
 Loop engineering replaces manual prompting with designed systems that prompt agents
 automatically. This skill scaffolds those systems for a specific project.
 
+**Canonical templates:** All loop artifacts live in `templates/` next to this SKILL.md.
+Path A (this skill) and Path B (README direct copy) use the **same files**. BUILD mode
+copies from `templates/`, applies interview answers at `CUSTOMIZE` points, and writes
+to the project. Never invent structure from memory — read the template files first.
+
 **Two modes:**
-- **BUILD** — developer wants to create a loop from scratch → run the Interview, then produce artifacts
-- **AUDIT** — developer has an existing loop and wants it reviewed → run the Audit Checklist
+- **BUILD** — developer wants to create a loop from scratch → Interview, then copy templates
+- **AUDIT** — developer has an existing loop and wants it reviewed → Audit Checklist
 
 Determine which mode applies from context, or ask if unclear.
 
@@ -36,218 +41,76 @@ Before producing any files, collect the following. Ask all at once to save turns
 ```
 1. What triggers the work? (CI failures / open issues / commits / manual Slack trigger / all of the above)
 2. What does "done" look like for a task? (tests pass / lint clean / PR approved / custom condition)
-3. Which toolchain? (Claude Code / Codex / both)
+3. Which toolchain? (Cursor / Claude Code / Codex / other)
 4. Where should the loop run? (local machine / GitHub Actions / both)
 5. Should agents open PRs automatically, or land everything in an inbox for human review?
-6. Do you already have a CLAUDE.md or AGENTS.md? (affects where to put the skill)
+6. Do you already have a CLAUDE.md, AGENTS.md, or .cursor/rules? (affects harness + skill paths)
 7. What's the budget ceiling per run? (dollar amount or token count — required before shipping)
 ```
 
 If the developer can't answer #2 (the stop condition), stop and resolve it before
 proceeding. A loop without a verifiable stop condition is the Nodding Loop anti-pattern.
 
-### Step 2: Produce the Five Artifacts
+### Step 2: Resolve destination paths
 
-Once the interview is complete, produce all five in order. Each maps to one of the
-five loop moves from the IEEE paper. See `references/five-moves.md` for the theoretical
-grounding if needed.
+From interview answer #3, set these paths in the **target project** (not this skill dir):
 
-#### Artifact 1 — Discovery Skill (maps to: Discovery move)
+| Toolchain | loop-triage skill | loop-engineering (already installed) | evaluator agent |
+|-----------|-------------------|--------------------------------------|-----------------|
+| **Cursor** | `.cursor/skills/loop-triage/SKILL.md` | `.cursor/skills/loop-engineering/` | project agent config or `.cursor/agents/loop-reviewer.md` if supported |
+| **Claude Code** | `.claude/skills/loop-triage/SKILL.md` | `.claude/skills/loop-engineering/` | `.claude/agents/loop-reviewer.md` |
+| **Codex** | `.codex/skills/loop-triage/SKILL.md` | `.codex/skills/loop-engineering/` | `.codex/agents/loop-reviewer.md` |
 
-File: `.claude/skills/loop-triage/SKILL.md`
+Shared paths (all toolchains):
 
-```markdown
----
-name: loop-triage
-trigger: invoked by daily automation or on-demand
----
+| Artifact | Destination |
+|----------|-------------|
+| State file | `state/triage.md` |
+| Inbox | `inbox/.gitkeep` |
+| Schedule | `.github/workflows/loop-triage.yml` (if answer #4 includes GitHub Actions) |
+| Checklist | `loop-checklist.md` (project root) |
 
-## Read (Discovery inputs)
-- CI runs that failed since the last run
-- Issues opened in the last 24h
-- Commits merged since the last run
-- The previous ./state/triage.md (carry forward unresolved findings)
+Tell the developer the resolved paths before writing files.
 
-## Judge
-For each candidate finding, decide:
-- Is it actionable now, or noise? (skip noise)
-- Does it block a release? → mark priority:high
-- Is it already tracked in triage.md? → skip, don't duplicate
+### Step 3: Copy templates and customize
 
-Keep only findings worth opening a worktree for today.
+Read each file from `templates/` (relative to this skill). Copy content to the
+destination paths above. **Do not paraphrase, summarize, or omit sections** outside
+`CUSTOMIZE` markers. If a bundled template is missing, fetch the matching file from
+`https://raw.githubusercontent.com/Geeksfino/ai-dev-playbook/main/templates/`.
 
-## Write (Persistence output)
-Append to ./state/triage.md:
-| finding | source | priority | status | worktree |
-Commit the file so the next run can read it.
+Apply interview answers only where indicated:
 
-## Hand off
-For each kept finding, emit a task line:
-  worktree=fix/<slug>  goal=<stop-condition>  description=<one-line>
+| Template | Source file | Customize using |
+|----------|-------------|-----------------|
+| Discovery skill | `templates/loop-triage/loop-triage.md` | Q1 (triggers → Read), Q2 (stop condition → Hand off examples), Q5 (inbox vs PR → Stop), project labels at `<!-- CUSTOMIZE -->` |
+| State file | `templates/state/triage.md` | Usually none — commit as-is |
+| Evaluator | `templates/evaluator-agent/loop-reviewer.md` | **No edits** — copy verbatim |
+| Schedule | `templates/github-actions/loop-triage.yml` | Q4 (cron if Actions), Q7 (`--max-tokens`), Q5 (PR vs inbox in run prompt) |
+| Inbox | `templates/inbox/.gitkeep` | Copy as-is |
+| Checklist | `templates/loop-checklist.md` | Copy as-is; developer checks boxes manually |
 
-## Stop (the boundary you keep for yourself)
-- Never merge. Never delete files. Never push to main directly.
-- Anything with confidence < high goes to ./inbox/ for human review.
-- If a finding touches auth, payments, or migrations: inbox, always.
-```
+**Strip TEMPLATE header comments** (lines starting with `# TEMPLATE`) from files written
+into the target project — those headers are for humans copying from the playbook repo,
+not for deployed loop files.
 
-> **Customize:** Replace the Judge section's priority rules with your project's
-> actual triage criteria (e.g., label names from your issue tracker, CI job names).
+**Scheduling (#4):** If GitHub Actions only → write workflow file. If local only → skip
+workflow; document the `/loop` command from `references/toolchain-map.md`. If both → write
+workflow and document local command.
 
----
+**Evaluator:** Never weaken `loop-reviewer.md`. A separate skeptical evaluator prevents
+the Nodding Loop anti-pattern.
 
-#### Artifact 2 — State File Template (maps to: Persistence move)
+### Step 4: Verify before finishing
 
-File: `./state/triage.md`
+Confirm for the developer:
 
-```markdown
-# Loop State — Triage
-
-_Updated automatically by loop-triage skill. Do not edit manually._
-
-| finding | source | priority | status | worktree | notes |
-|---------|--------|----------|--------|----------|-------|
-| (empty) | —      | —        | —      | —        | —     |
-```
-
-Commit this file to the repo. The agent reads it at the start of each run and writes
-back to it at the end. This is the loop's memory — it must survive context window
-clears. The agent forgets; the repo does not.
-
----
-
-#### Artifact 3 — Evaluator Agent Config (maps to: Verification move)
-
-File: `.claude/agents/loop-reviewer.md`
-
-```markdown
----
-name: loop-reviewer
-description: Adversarial reviewer for loop-generated changes. Assumes broken until proven otherwise.
----
-
-ROLE: You are an adversarial code reviewer. Your default stance is doubt, not trust.
-
-ASSUME: The code you are reviewing is broken until you have proven otherwise through
-execution, not reading.
-
-DO NOT praise. Find what fails.
-
-CHECK in order:
-1. Does it run? Execute it. Don't just read it.
-2. Run existing tests. Paste the actual output, not a summary.
-3. Check edge cases the author skipped. Empty inputs. Null values. Auth failures.
-4. Does the behavior match the original ticket or finding?
-5. Did the change touch anything outside its stated scope? Flag it.
-
-USE available tools: run tests, inspect files, check git diff.
-
-VERDICT:
-- PASS: every check above holds. State which checks passed.
-- REJECT: list each reason. Be specific. "Test X failed with output Y" not "tests may fail".
-
-A PASS from you is the stop condition. Do not pass code you have not executed.
-```
-
-> **Why a separate agent matters:** An agent grading its own output tends to pass it.
-> The context in which code was written is full of reasons it was written that way,
-> so the generator cannot see the result clearly. A fresh agent with different
-> instructions — defaulting to doubt — catches what the generator rationalized away.
-
----
-
-#### Artifact 4 — Schedule / Automation (maps to: Scheduling move)
-
-**Option A: GitHub Actions (runs cloud, machine-off safe)**
-
-File: `.github/workflows/loop-triage.yml`
-
-```yaml
-name: Loop Triage
-
-on:
-  schedule:
-    - cron: '0 6 * * 1-5'   # 06:00 weekdays UTC — adjust to your timezone
-  workflow_dispatch:          # allow manual trigger from GitHub UI
-
-jobs:
-  triage:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Run triage skill
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          npx @anthropic-ai/claude-code \
-            --skill loop-triage \
-            --budget-tokens 50000 \
-            --no-auto-merge \
-            "Run the loop-triage skill. Write findings to ./state/triage.md.
-             Open worktrees for actionable findings. Do not merge anything."
-
-      - name: Commit state file
-        run: |
-          git config user.name "loop-agent"
-          git config user.email "loop@noreply"
-          git add state/triage.md
-          git diff --staged --quiet || git commit -m "chore: loop triage $(date -u +%Y-%m-%d)"
-          git push
-```
-
-**Option B: Claude Code local `/loop` (requires machine on)**
-
-```bash
-# In your project root:
-/loop 0 6 * * 1-5 run the loop-triage skill
-```
-
-> **Choose based on one question:** Does the loop need to see local files or a local
-> dev server? → local. Can it work from a fresh git clone? → GitHub Actions.
-> Cloud scheduling means true autonomy (runs with lid closed); local means frequency
-> and local file access at the cost of requiring the machine on.
-
----
-
-#### Artifact 5 — First Loop Checklist (maps to: all five moves)
-
-File: `./loop-checklist.md`
-
-```markdown
-# Loop Engineering Checklist
-
-Before shipping the loop unattended, verify every item.
-
-## Discovery
-- [ ] The triage skill reads at least one live source (CI / issues / commits)
-- [ ] The skill is in a SKILL.md file, not inlined in a cron command
-- [ ] The skill skips noise (not every open issue is worth a worktree)
-
-## Handoff
-- [ ] Each finding gets its own isolated worktree (--worktree flag)
-- [ ] Two agents never write to the same working directory simultaneously
-
-## Verification
-- [ ] A separate evaluator agent exists with instructions to default to doubt
-- [ ] The evaluator executes code, not just reads it
-- [ ] The stop condition is a fresh model checking the condition, not the generator
-
-## Persistence
-- [ ] ./state/triage.md is committed to the repo after each run
-- [ ] ./inbox/ exists for findings the agent isn't confident about
-- [ ] PRs are opened, never auto-merged without human review
-
-## Scheduling
-- [ ] A real trigger exists (cron / workflow_dispatch / /loop command)
-- [ ] The trigger calls the skill by name, not a wall of inline instructions
-- [ ] A budget ceiling is set (tokens or dollars) before first unattended run
-
-## Safety
-- [ ] The loop cannot merge to main without a human reviewing the PR
-- [ ] Auth / payments / migrations are hard-coded to the inbox
-- [ ] Someone knows how to stop the loop if it runs off (cancel workflow / kill /loop)
-```
+1. All five loop moves are covered (see `references/five-moves.md`)
+2. Generated loop-triage and workflow match bundled templates except CUSTOMIZE substitutions
+3. `loop-reviewer.md` is byte-identical to `templates/evaluator-agent/loop-reviewer.md` (minus TEMPLATE header)
+4. `state/triage.md` and `inbox/` exist before any schedule is enabled
+5. Budget ceiling from Q7 is reflected in workflow `--max-tokens` or documented for local runs
+6. `loop-checklist.md` is in the project root — walk through it together if this is the first loop
 
 ---
 
@@ -267,7 +130,9 @@ Run through each anti-pattern and report: **present / absent / partial**.
 | **Blind Loop** | Is a human still deciding what the loop works on each morning? Discovery is missing. |
 | **Tangled Loop** | Do parallel agents use separate worktrees? Check for shared working directory collisions. |
 
-For each **absent** or **partial** item, produce the missing artifact from Mode 1.
+For each **absent** or **partial** item, copy the relevant file from `templates/`,
+customize from what you know about the project, and write to the correct destination
+(same rules as BUILD Step 3).
 
 ---
 
@@ -288,9 +153,10 @@ A loop without a budget cap has delegated its spending authority to its own bugs
 
 ## Reference Files
 
+- `templates/` — Canonical loop artifacts (same as playbook `templates/` at repo root)
 - `references/five-moves.md` — Theory: discovery, handoff, verification, persistence, scheduling
 - `references/failure-modes.md` — The five anti-patterns and how to diagnose them
-- `references/toolchain-map.md` — Claude Code vs Codex command equivalents
+- `references/toolchain-map.md` — Claude Code vs Codex vs Cursor command equivalents
 
-Read these only when you need the underlying reasoning. The artifacts above are the
-deliverables; the references explain why.
+Read reference files only when you need underlying reasoning. Always read `templates/`
+when producing or repairing artifacts.

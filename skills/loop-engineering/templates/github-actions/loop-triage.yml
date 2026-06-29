@@ -1,0 +1,73 @@
+# TEMPLATE — copy this file to: .github/workflows/loop-triage.yml
+# Add ANTHROPIC_API_KEY to your repository secrets before enabling.
+# See README.md → Templates for the full install sequence.
+
+name: Loop Triage
+
+# Runs the loop-triage skill on a schedule.
+# Requires ANTHROPIC_API_KEY in repository secrets.
+#
+# CUSTOMIZE:
+#   - cron schedule (currently 06:00 UTC weekdays)
+#   - budget-tokens ceiling
+#   - branch name if not 'main'
+
+on:
+  schedule:
+    - cron: '0 6 * * 1-5'   # 06:00 UTC, Monday–Friday
+  workflow_dispatch:          # allow manual trigger from GitHub Actions UI
+
+permissions:
+  contents: write            # needed to commit state/triage.md back to repo
+  pull-requests: write       # needed to open PRs for findings
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30      # hard ceiling — adjust based on your budget
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0     # full history so the skill can read recent commits
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run triage skill
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # for opening PRs via gh CLI
+        run: |
+          claude \
+            --skill loop-triage \
+            --max-tokens 50000 \
+            --no-auto-merge \
+            "Run the loop-triage skill. Write findings to ./state/triage.md.
+             Open a worktree for each actionable finding. Open PRs for completed
+             fixes. Do not merge anything. Send uncertain findings to ./inbox/."
+
+      - name: Commit state file
+        run: |
+          git config user.name  "loop-agent"
+          git config user.email "loop-agent@noreply.github.com"
+          git add state/triage.md
+          # only commit if the file changed
+          git diff --staged --quiet || \
+            git commit -m "chore: loop triage $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
+
+      - name: Upload inbox for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: loop-inbox-${{ github.run_id }}
+          path: inbox/
+          if-no-files-found: ignore
+          retention-days: 7

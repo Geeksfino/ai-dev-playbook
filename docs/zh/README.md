@@ -76,7 +76,7 @@ loop-engineering 生成的 **Artifact 1（triage `SKILL.md`）** 本身也是一
    比访谈更快；无需交互式搭建
 ```
 
-技能路径与模板路径会在项目中生成相同文件、放在相同位置。技能路径有引导且贴合项目；模板路径更快，但自定义工作由你承担。
+技能路径与模板路径会在项目中生成相同文件、放在相同位置。两者使用**同一套 canonical 模板**——技能路径通过访谈定制后写入；模板路径由你自行编辑 `CUSTOMIZE` 标记。
 
 ---
 
@@ -127,6 +127,7 @@ curl https://raw.githubusercontent.com/$REPO/main/CLAUDE.md >> CLAUDE.md
 ```bash
 BASE=https://raw.githubusercontent.com/$REPO/main
 mkdir -p .cursor/skills/loop-engineering/references
+mkdir -p .cursor/skills/loop-engineering/templates/{loop-triage,evaluator-agent,state,github-actions,inbox}
 
 curl -o .cursor/skills/loop-engineering/SKILL.md \
   $BASE/skills/loop-engineering/SKILL.md
@@ -135,6 +136,19 @@ for f in five-moves failure-modes toolchain-map; do
   curl -o .cursor/skills/loop-engineering/references/$f.md \
     $BASE/skills/loop-engineering/references/$f.md
 done
+
+curl -o .cursor/skills/loop-engineering/templates/loop-triage/loop-triage.md \
+  $BASE/skills/loop-engineering/templates/loop-triage/loop-triage.md
+curl -o .cursor/skills/loop-engineering/templates/evaluator-agent/loop-reviewer.md \
+  $BASE/skills/loop-engineering/templates/evaluator-agent/loop-reviewer.md
+curl -o .cursor/skills/loop-engineering/templates/state/triage.md \
+  $BASE/skills/loop-engineering/templates/state/triage.md
+curl -o .cursor/skills/loop-engineering/templates/github-actions/loop-triage.yml \
+  $BASE/skills/loop-engineering/templates/github-actions/loop-triage.yml
+curl -o .cursor/skills/loop-engineering/templates/inbox/.gitkeep \
+  $BASE/skills/loop-engineering/templates/inbox/.gitkeep
+curl -o .cursor/skills/loop-engineering/templates/loop-checklist.md \
+  $BASE/skills/loop-engineering/templates/loop-checklist.md
 ```
 
 **Claude Code：**
@@ -142,6 +156,7 @@ done
 ```bash
 BASE=https://raw.githubusercontent.com/$REPO/main
 mkdir -p .claude/skills/loop-engineering/references
+mkdir -p .claude/skills/loop-engineering/templates/{loop-triage,evaluator-agent,state,github-actions,inbox}
 
 curl -o .claude/skills/loop-engineering/SKILL.md \
   $BASE/skills/loop-engineering/SKILL.md
@@ -150,13 +165,26 @@ for f in five-moves failure-modes toolchain-map; do
   curl -o .claude/skills/loop-engineering/references/$f.md \
     $BASE/skills/loop-engineering/references/$f.md
 done
+
+curl -o .claude/skills/loop-engineering/templates/loop-triage/loop-triage.md \
+  $BASE/skills/loop-engineering/templates/loop-triage/loop-triage.md
+curl -o .claude/skills/loop-engineering/templates/evaluator-agent/loop-reviewer.md \
+  $BASE/skills/loop-engineering/templates/evaluator-agent/loop-reviewer.md
+curl -o .claude/skills/loop-engineering/templates/state/triage.md \
+  $BASE/skills/loop-engineering/templates/state/triage.md
+curl -o .claude/skills/loop-engineering/templates/github-actions/loop-triage.yml \
+  $BASE/skills/loop-engineering/templates/github-actions/loop-triage.yml
+curl -o .claude/skills/loop-engineering/templates/inbox/.gitkeep \
+  $BASE/skills/loop-engineering/templates/inbox/.gitkeep
+curl -o .claude/skills/loop-engineering/templates/loop-checklist.md \
+  $BASE/skills/loop-engineering/templates/loop-checklist.md
 ```
 
 **Codex** — 同样的 `SKILL.md` 与 references；放入 Codex 技能目录，通过 `$loop-engineering` 调用。
 
 然后向 Agent 说：**「帮我为这个项目搭建一个 loop」**
 
-技能会进行 7 问访谈（触发源、停止条件、工具链、调度偏好、预算上限、PR 还是 inbox、现有 harness 规则）。访谈结束后生成五个循环文件的定制版本，并说明各自应放置的位置。
+技能会进行 7 问访谈（触发源、停止条件、工具链、调度偏好、预算上限、PR 还是 inbox、现有 harness 规则）。访谈结束后**从内置 `templates/` 复制模板**到项目，根据你的回答定制 `CUSTOMIZE` 标记，并写入正确路径。产出与直接复制模板路径（Path B）一致。
 
 ---
 
@@ -173,6 +201,7 @@ done
 | `templates/state/triage.md` | `state/triage.md` | 循环记忆 — 跨运行持久化发现项 |
 | `templates/inbox/.gitkeep` | `inbox/.gitkeep` | 人工审核队列 — Agent 不会单独处理的发现项 |
 | `templates/github-actions/loop-triage.yml` | `.github/workflows/loop-triage.yml` | 调度 — 无需本机在线的 cron 运行 |
+| `templates/loop-checklist.md` | `loop-checklist.md` | 起飞前检查清单 — 无人值守运行前核对五步法 |
 
 **安装顺序很重要。** 请按此顺序操作，否则循环没有可读的状态：
 
@@ -197,6 +226,9 @@ curl -o $AGENT_DIR/loop-reviewer.md $BASE/templates/evaluator-agent/loop-reviewe
 # 步骤 4 — 调度（触发循环；需先完成步骤 1–3）
 mkdir -p .github/workflows
 curl -o .github/workflows/loop-triage.yml $BASE/templates/github-actions/loop-triage.yml
+
+# 步骤 5 — 检查清单（可选，首次无人值守运行前建议完成）
+curl -o loop-checklist.md $BASE/templates/loop-checklist.md
 ```
 
 **复制后、提交前请编辑：**

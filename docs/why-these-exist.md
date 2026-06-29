@@ -88,9 +88,13 @@ dangerous. A loop that has never produced a REJECT is not a functioning loop.
 
 ## Templates
 
-The templates are the artifacts the loop-engineering skill generates after its
-7-question interview. They exist here as standalone files so developers who already
-know what they want can copy them directly without running the interactive setup.
+The templates are the canonical loop artifacts. The loop-engineering skill bundles
+the same files under `skills/loop-engineering/templates/` — BUILD mode copies from
+there, customizes `CUSTOMIZE` markers from the interview, and writes to the project.
+Path A (skill) and Path B (direct copy from `templates/`) produce matching output.
+
+They also exist at `templates/` in this repo so developers who already know what
+they want can copy them directly without running the interactive setup.
 
 Each template has `<!-- CUSTOMIZE -->` markers at the decision points that must be
 adapted per project. Everything outside those markers is intentionally opinionated

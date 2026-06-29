@@ -78,8 +78,9 @@ Already know your project's triage rules and stop conditions?
 ```
 
 Both the skill path and the template path produce the same files in the same
-locations inside your project. The skill path is guided and project-aware;
-the template path is faster but requires you to own the customisation.
+locations inside your project. They use the **same canonical templates** — the
+skill path runs the interview and writes customized copies; the template path
+lets you copy and edit `CUSTOMIZE` markers yourself.
 
 ---
 
@@ -130,6 +131,7 @@ Install once per project. Your agent discovers the skill automatically when rele
 ```bash
 BASE=https://raw.githubusercontent.com/$REPO/main
 mkdir -p .cursor/skills/loop-engineering/references
+mkdir -p .cursor/skills/loop-engineering/templates/{loop-triage,evaluator-agent,state,github-actions,inbox}
 
 curl -o .cursor/skills/loop-engineering/SKILL.md \
   $BASE/skills/loop-engineering/SKILL.md
@@ -138,6 +140,19 @@ for f in five-moves failure-modes toolchain-map; do
   curl -o .cursor/skills/loop-engineering/references/$f.md \
     $BASE/skills/loop-engineering/references/$f.md
 done
+
+curl -o .cursor/skills/loop-engineering/templates/loop-triage/loop-triage.md \
+  $BASE/skills/loop-engineering/templates/loop-triage/loop-triage.md
+curl -o .cursor/skills/loop-engineering/templates/evaluator-agent/loop-reviewer.md \
+  $BASE/skills/loop-engineering/templates/evaluator-agent/loop-reviewer.md
+curl -o .cursor/skills/loop-engineering/templates/state/triage.md \
+  $BASE/skills/loop-engineering/templates/state/triage.md
+curl -o .cursor/skills/loop-engineering/templates/github-actions/loop-triage.yml \
+  $BASE/skills/loop-engineering/templates/github-actions/loop-triage.yml
+curl -o .cursor/skills/loop-engineering/templates/inbox/.gitkeep \
+  $BASE/skills/loop-engineering/templates/inbox/.gitkeep
+curl -o .cursor/skills/loop-engineering/templates/loop-checklist.md \
+  $BASE/skills/loop-engineering/templates/loop-checklist.md
 ```
 
 **Claude Code:**
@@ -145,6 +160,7 @@ done
 ```bash
 BASE=https://raw.githubusercontent.com/$REPO/main
 mkdir -p .claude/skills/loop-engineering/references
+mkdir -p .claude/skills/loop-engineering/templates/{loop-triage,evaluator-agent,state,github-actions,inbox}
 
 curl -o .claude/skills/loop-engineering/SKILL.md \
   $BASE/skills/loop-engineering/SKILL.md
@@ -153,6 +169,19 @@ for f in five-moves failure-modes toolchain-map; do
   curl -o .claude/skills/loop-engineering/references/$f.md \
     $BASE/skills/loop-engineering/references/$f.md
 done
+
+curl -o .claude/skills/loop-engineering/templates/loop-triage/loop-triage.md \
+  $BASE/skills/loop-engineering/templates/loop-triage/loop-triage.md
+curl -o .claude/skills/loop-engineering/templates/evaluator-agent/loop-reviewer.md \
+  $BASE/skills/loop-engineering/templates/evaluator-agent/loop-reviewer.md
+curl -o .claude/skills/loop-engineering/templates/state/triage.md \
+  $BASE/skills/loop-engineering/templates/state/triage.md
+curl -o .claude/skills/loop-engineering/templates/github-actions/loop-triage.yml \
+  $BASE/skills/loop-engineering/templates/github-actions/loop-triage.yml
+curl -o .claude/skills/loop-engineering/templates/inbox/.gitkeep \
+  $BASE/skills/loop-engineering/templates/inbox/.gitkeep
+curl -o .claude/skills/loop-engineering/templates/loop-checklist.md \
+  $BASE/skills/loop-engineering/templates/loop-checklist.md
 ```
 
 **Codex** — same `SKILL.md` and references; place under your Codex skill directory and invoke with `$loop-engineering`.
@@ -161,8 +190,9 @@ Then ask your agent: **"help me set up a loop for this project"**
 
 The skill runs a 7-question interview (trigger sources, stop conditions, toolchain,
 scheduling preference, budget ceiling, PR vs inbox behaviour, existing harness rules).
-After the interview it generates customised versions of the five loop files and tells
-you exactly where to place each one.
+After the interview it **copies the bundled `templates/`** into your project,
+customizes `CUSTOMIZE` markers from your answers, and writes each file to the
+correct path. Output matches the direct template path (Path B).
 
 ---
 
@@ -181,6 +211,7 @@ your project.
 | `templates/state/triage.md` | `state/triage.md` | Loop memory — persists findings across runs |
 | `templates/inbox/.gitkeep` | `inbox/.gitkeep` | Human review queue — findings the agent won't act on alone |
 | `templates/github-actions/loop-triage.yml` | `.github/workflows/loop-triage.yml` | Schedule — runs the loop on a cron without the machine on |
+| `templates/loop-checklist.md` | `loop-checklist.md` | Pre-flight checklist — verify all five moves before unattended runs |
 
 **Install order matters.** Set up in this sequence or the loop has nothing to read:
 
@@ -205,6 +236,9 @@ curl -o $AGENT_DIR/loop-reviewer.md $BASE/templates/evaluator-agent/loop-reviewe
 # Step 4 — schedule (triggers the loop; requires steps 1–3 to already be in place)
 mkdir -p .github/workflows
 curl -o .github/workflows/loop-triage.yml $BASE/templates/github-actions/loop-triage.yml
+
+# Step 5 — checklist (optional but recommended before first unattended run)
+curl -o loop-checklist.md $BASE/templates/loop-checklist.md
 ```
 
 **After copying, edit these before committing:**
@@ -238,7 +272,8 @@ instructions are intentionally opinionated and should not be weakened.
 | `CLAUDE.md` | Every session | ~670 tokens (fixed overhead) |
 | `loop-engineering/SKILL.md` | When loop setup is requested | ~2,800 tokens |
 | `references/*.md` | Only when skill needs them | ~950–1,400 tokens each |
-| Templates | Never loaded by the model | 0 tokens |
+| `templates/*` (bundled with skill) | Only during loop BUILD/AUDIT | ~3,500 tokens if all loaded |
+| Templates at repo root | Never loaded by the model | 0 tokens (copy-paste only) |
 
 See [docs/token-costs.md](docs/token-costs.md) for the full breakdown.
 

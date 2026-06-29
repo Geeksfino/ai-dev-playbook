@@ -60,7 +60,9 @@
 
 ## 模板
 
-模板是 loop-engineering 技能在完成 7 问访谈后生成的产物。它们也作为独立文件放在仓库里，方便已明确需求的开发者直接复制，无需交互式搭建。
+模板是 canonical 循环产物。loop-engineering 技能在 `skills/loop-engineering/templates/` 下内置同一套文件——BUILD 模式从那里复制，根据访谈定制 `CUSTOMIZE` 标记后写入项目。Path A（技能）与 Path B（直接从 `templates/` 复制）产出一致。
+
+它们也放在仓库根目录 `templates/` 下，方便已明确需求的开发者直接复制，无需交互式搭建。
 
 每个模板在需按项目调整的决策点有 `<!-- CUSTOMIZE -->` 标记。标记之外的内容是有意为之的意见，除非有充分理由否则应保持不变。
 
