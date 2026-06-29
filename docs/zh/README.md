@@ -50,14 +50,30 @@ loop-engineering 生成的 **Artifact 1（triage `SKILL.md`）** 本身也是一
 
 本 Playbook **不**绑定 Claude Code 或 Codex。行为规则和循环模式适用于任何支持持久化指令和技能的 Agent。
 
-| 工具 | Harness 层 | Loop 技能 |
-|------|-----------|----------|
-| **Cursor** | `.cursor/rules/playbook.mdc`（`alwaysApply: true`） | `.cursor/skills/loop-engineering/` |
-| **Claude Code** | 项目根目录的 `CLAUDE.md` | `.claude/skills/loop-engineering/` |
-| **Codex** | `AGENTS.md` 或项目指令 | `.codex/skills/` 或通过 `$skill-name` 调用 |
-| **其他 Agent** | 各工具的系统指令文件 | 将 `SKILL.md` 复制到对应技能目录 |
+| 工具 | Harness 层 | Loop 搭建技能（`loop-engineering`） | Loop 运行时（生成产物） |
+|------|-----------|-----------------------------------|------------------------|
+| **Cursor** | `.cursor/rules/playbook.mdc` | `~/.cursor/skills/`（个人）或 `.cursor/skills/`（项目） | **每个项目**内的 `.cursor/skills/loop-triage/`、`state/` 等 |
+| **Claude Code** | 项目根目录 `CLAUDE.md` | `~/.claude/skills/`（个人）或 `.claude/skills/`（项目） | **每个项目**内的 `.claude/skills/loop-triage/`、`state/` 等 |
+| **Codex** | `AGENTS.md` 或项目指令 | Codex 技能目录 | 各项目内的 loop 文件 |
+| **其他 Agent** | 系统指令文件 | 用户级或项目级技能目录 | 各项目内的 loop 文件 |
 
 下文安装命令中，将 `REPO` 设为 `Geeksfino/ai-dev-playbook`（或你的 fork）。
+
+---
+
+## 个人安装 vs 项目安装
+
+并非所有文件都应放在同一位置。Playbook 将**搭建工具**与**运行中的 loop 文件**分开。
+
+| 文件 | 个人（`~/.cursor/skills/`） | 项目（仓库内 `.cursor/skills/`） |
+|------|---------------------------|--------------------------------|
+| **`loop-engineering`**（搭建与审计） | **推荐**个人开发者跨多仓库使用 — 装一次，处处可用 | **推荐**团队 — 版本固定，clone 即有 |
+| **`loop-triage`**（发现） | 不要 — 规则因仓库而异 | **始终**放在有 loop 的项目并提交 |
+| **`state/`、`inbox/`、workflow、evaluator、checklist** | 不要 | **始终**按项目提交 |
+
+**经验法则：** `loop-engineering` 装在*工具*所在处；loop *产出*装在*代码*所在处。
+
+勿使用 `~/.cursor/skills-cursor/` — 该目录为 Cursor 内置技能保留。
 
 ---
 
@@ -120,63 +136,74 @@ curl https://raw.githubusercontent.com/$REPO/main/CLAUDE.md >> CLAUDE.md
 
 ### Loop 层 — 引导式搭建（技能路径）
 
-每个项目安装一次。相关时 Agent 会自动发现该技能。
+`loop-engineering` 安装一次即可（个人或项目 — 见上文）。Agent 在相关时自动发现该技能；技能将 loop **运行时**文件写入**当前打开的项目**。
 
-**Cursor：**
+**Cursor** — 设置 `SKILL_HOME` 为个人或项目路径后执行：
 
 ```bash
 BASE=https://raw.githubusercontent.com/$REPO/main
-mkdir -p .cursor/skills/loop-engineering/references
-mkdir -p .cursor/skills/loop-engineering/templates/{loop-triage,evaluator-agent,state,github-actions,inbox}
 
-curl -o .cursor/skills/loop-engineering/SKILL.md \
-  $BASE/skills/loop-engineering/SKILL.md
+# 个人（推荐个人开发者）：所有 Cursor 项目可用
+SKILL_HOME=~/.cursor/skills/loop-engineering
+
+# 项目（推荐团队）：将 .cursor/skills/loop-engineering/ 提交到仓库
+# SKILL_HOME=.cursor/skills/loop-engineering
+
+mkdir -p $SKILL_HOME/references
+mkdir -p $SKILL_HOME/templates/{loop-triage,evaluator-agent,state,github-actions,inbox}
+
+curl -o $SKILL_HOME/SKILL.md $BASE/skills/loop-engineering/SKILL.md
 
 for f in five-moves failure-modes toolchain-map; do
-  curl -o .cursor/skills/loop-engineering/references/$f.md \
+  curl -o $SKILL_HOME/references/$f.md \
     $BASE/skills/loop-engineering/references/$f.md
 done
 
-curl -o .cursor/skills/loop-engineering/templates/loop-triage/loop-triage.md \
+curl -o $SKILL_HOME/templates/loop-triage/loop-triage.md \
   $BASE/skills/loop-engineering/templates/loop-triage/loop-triage.md
-curl -o .cursor/skills/loop-engineering/templates/evaluator-agent/loop-reviewer.md \
+curl -o $SKILL_HOME/templates/evaluator-agent/loop-reviewer.md \
   $BASE/skills/loop-engineering/templates/evaluator-agent/loop-reviewer.md
-curl -o .cursor/skills/loop-engineering/templates/state/triage.md \
+curl -o $SKILL_HOME/templates/state/triage.md \
   $BASE/skills/loop-engineering/templates/state/triage.md
-curl -o .cursor/skills/loop-engineering/templates/github-actions/loop-triage.yml \
+curl -o $SKILL_HOME/templates/github-actions/loop-triage.yml \
   $BASE/skills/loop-engineering/templates/github-actions/loop-triage.yml
-curl -o .cursor/skills/loop-engineering/templates/inbox/.gitkeep \
+curl -o $SKILL_HOME/templates/inbox/.gitkeep \
   $BASE/skills/loop-engineering/templates/inbox/.gitkeep
-curl -o .cursor/skills/loop-engineering/templates/loop-checklist.md \
+curl -o $SKILL_HOME/templates/loop-checklist.md \
   $BASE/skills/loop-engineering/templates/loop-checklist.md
 ```
 
-**Claude Code：**
+**Claude Code** — 同样使用 `SKILL_HOME`：
 
 ```bash
 BASE=https://raw.githubusercontent.com/$REPO/main
-mkdir -p .claude/skills/loop-engineering/references
-mkdir -p .claude/skills/loop-engineering/templates/{loop-triage,evaluator-agent,state,github-actions,inbox}
 
-curl -o .claude/skills/loop-engineering/SKILL.md \
-  $BASE/skills/loop-engineering/SKILL.md
+# 个人：SKILL_HOME=~/.claude/skills/loop-engineering
+SKILL_HOME=~/.claude/skills/loop-engineering
+
+# 项目：SKILL_HOME=.claude/skills/loop-engineering
+
+mkdir -p $SKILL_HOME/references
+mkdir -p $SKILL_HOME/templates/{loop-triage,evaluator-agent,state,github-actions,inbox}
+
+curl -o $SKILL_HOME/SKILL.md $BASE/skills/loop-engineering/SKILL.md
 
 for f in five-moves failure-modes toolchain-map; do
-  curl -o .claude/skills/loop-engineering/references/$f.md \
+  curl -o $SKILL_HOME/references/$f.md \
     $BASE/skills/loop-engineering/references/$f.md
 done
 
-curl -o .claude/skills/loop-engineering/templates/loop-triage/loop-triage.md \
+curl -o $SKILL_HOME/templates/loop-triage/loop-triage.md \
   $BASE/skills/loop-engineering/templates/loop-triage/loop-triage.md
-curl -o .claude/skills/loop-engineering/templates/evaluator-agent/loop-reviewer.md \
+curl -o $SKILL_HOME/templates/evaluator-agent/loop-reviewer.md \
   $BASE/skills/loop-engineering/templates/evaluator-agent/loop-reviewer.md
-curl -o .claude/skills/loop-engineering/templates/state/triage.md \
+curl -o $SKILL_HOME/templates/state/triage.md \
   $BASE/skills/loop-engineering/templates/state/triage.md
-curl -o .claude/skills/loop-engineering/templates/github-actions/loop-triage.yml \
+curl -o $SKILL_HOME/templates/github-actions/loop-triage.yml \
   $BASE/skills/loop-engineering/templates/github-actions/loop-triage.yml
-curl -o .claude/skills/loop-engineering/templates/inbox/.gitkeep \
+curl -o $SKILL_HOME/templates/inbox/.gitkeep \
   $BASE/skills/loop-engineering/templates/inbox/.gitkeep
-curl -o .claude/skills/loop-engineering/templates/loop-checklist.md \
+curl -o $SKILL_HOME/templates/loop-checklist.md \
   $BASE/skills/loop-engineering/templates/loop-checklist.md
 ```
 

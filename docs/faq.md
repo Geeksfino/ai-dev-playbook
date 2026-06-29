@@ -31,8 +31,27 @@ instructions.
 - **Other tools:** check their docs for the equivalent configuration file
 
 The loop-engineering skill is a `SKILL.md` file that works in Cursor
-(`.cursor/skills/`), Claude Code (`.claude/skills/`), or Codex's skill directory.
-The loop logic is tool-agnostic; only paths and invocation syntax differ.
+(`~/.cursor/skills/` or `.cursor/skills/`), Claude Code (`~/.claude/skills/` or
+`.claude/skills/`), or Codex's skill directory. Install `loop-engineering`
+personally if you set up loops across many repos; install it in the project if
+the whole team should share the same version. Loop **runtime** files
+(`loop-triage`, `state/`, workflow, etc.) always belong in each project repo.
+
+---
+
+**Should `loop-engineering` go in `~/.cursor/skills/` or `.cursor/skills/`?**
+
+**Personal (`~/.cursor/skills/loop-engineering/`)** — recommended if you're one
+developer scaffolding loops in multiple projects. Install once; open any repo and
+ask to set up a loop.
+
+**Project (`.cursor/skills/loop-engineering/`)** — recommended for teams so
+everyone gets the same skill version on clone.
+
+Either way, commit only the **generated loop files** (`loop-triage`, `state/`,
+`inbox/`, workflow) in each project — not necessarily the scaffolding skill.
+
+Do not use `~/.cursor/skills-cursor/`; that path is for Cursor built-in skills only.
 
 ---
 

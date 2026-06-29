@@ -23,7 +23,19 @@ loop 技能仅在你希望 Agent 按调度自动运行、无需手动 prompt 时
 - **Codex：** 复制到 `AGENTS.md` 或项目指令
 - **其他工具：** 查阅文档找到等效配置文件
 
-loop-engineering 技能是 `SKILL.md` 格式，可放入 Cursor（`.cursor/skills/`）、Claude Code（`.claude/skills/`）或 Codex 的技能目录。核心逻辑与工具无关；只有路径和调用方式不同。
+loop-engineering 技能是 `SKILL.md` 格式，可用于 Cursor（`~/.cursor/skills/` 或 `.cursor/skills/`）、Claude Code（`~/.claude/skills/` 或 `.claude/skills/`）或 Codex 技能目录。若在多个仓库搭建 loop，建议将 `loop-engineering` **个人安装**；若团队需统一版本，则**项目安装**。loop **运行时**文件（`loop-triage`、`state/`、workflow 等）始终放在各项目仓库内。
+
+---
+
+**`loop-engineering` 应放在 `~/.cursor/skills/` 还是 `.cursor/skills/`？**
+
+**个人（`~/.cursor/skills/loop-engineering/`）** — 推荐个人开发者在多项目中搭建 loop。装一次，打开任意仓库即可请求搭建。
+
+**项目（`.cursor/skills/loop-engineering/`）** — 推荐团队使用，clone 后人人版本一致。
+
+无论哪种方式，各项目只需提交**生成的 loop 文件**（`loop-triage`、`state/`、`inbox/`、workflow），不必把搭建技能也提交进每个仓库。
+
+勿使用 `~/.cursor/skills-cursor/`；该路径仅供 Cursor 内置技能。
 
 ---
 

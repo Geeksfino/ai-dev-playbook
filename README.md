@@ -50,14 +50,30 @@ The **triage `SKILL.md`** that loop-engineering generates as Artifact 1 is itsel
 
 This playbook is **not** tied to Claude Code or Codex. The behavioral rules and loop patterns work with any agent that accepts persistent instructions and skills.
 
-| Tool | Harness layer | Loop skill |
-|------|--------------|------------|
-| **Cursor** | `.cursor/rules/playbook.mdc` (`alwaysApply: true`) | `.cursor/skills/loop-engineering/` |
-| **Claude Code** | `CLAUDE.md` in project root | `.claude/skills/loop-engineering/` |
-| **Codex** | `AGENTS.md` or project instructions | `.codex/skills/` or `$skill-name` invocation |
-| **Other agents** | Whatever your tool calls its system-instruction file | Copy `SKILL.md` to your tool's skill directory |
+| Tool | Harness layer | Loop setup skill (`loop-engineering`) | Loop runtime (generated) |
+|------|--------------|--------------------------------------|--------------------------|
+| **Cursor** | `.cursor/rules/playbook.mdc` | `~/.cursor/skills/` (personal) or `.cursor/skills/` (project) | `.cursor/skills/loop-triage/`, `state/`, etc. in **each project** |
+| **Claude Code** | `CLAUDE.md` in project root | `~/.claude/skills/` (personal) or `.claude/skills/` (project) | `.claude/skills/loop-triage/`, `state/`, etc. in **each project** |
+| **Codex** | `AGENTS.md` or project instructions | Codex skill directory | Per-project loop files |
+| **Other agents** | System-instruction file | User or project skill directory | Per-project loop files |
 
 Set `REPO=Geeksfino/ai-dev-playbook` (or your fork) in the commands below.
+
+---
+
+## Personal vs project install
+
+Not everything belongs in the same place. The playbook splits **setup tooling** from **running loop files**.
+
+| Artifact | Personal (`~/.cursor/skills/`) | Project (`.cursor/skills/` in repo) |
+|----------|--------------------------------|-------------------------------------|
+| **`loop-engineering`** (scaffolding + audit) | **Recommended** for solo devs working across many repos — install once, use everywhere | **Recommended** for teams — version-pinned, everyone gets it on clone |
+| **`loop-triage`** (discovery) | Never — rules are repo-specific | **Always** — commit in each project that runs a loop |
+| **`state/`, `inbox/`, workflow, evaluator, checklist** | Never | **Always** — committed per project |
+
+**Rule of thumb:** install `loop-engineering` where you install your *tools*; install loop *outputs* where your *code* lives.
+
+Do not use `~/.cursor/skills-cursor/` — that directory is reserved for Cursor's built-in skills.
 
 ---
 
@@ -124,63 +140,76 @@ curl https://raw.githubusercontent.com/$REPO/main/CLAUDE.md >> CLAUDE.md
 
 ### Loop layer — guided setup (skill path)
 
-Install once per project. Your agent discovers the skill automatically when relevant.
+Install `loop-engineering` once (personal or project — see above). Your agent
+discovers it automatically when relevant. The skill writes loop **runtime** files
+into whichever project you have open.
 
-**Cursor:**
+**Cursor** — set `SKILL_HOME` to personal or project path, then run:
 
 ```bash
 BASE=https://raw.githubusercontent.com/$REPO/main
-mkdir -p .cursor/skills/loop-engineering/references
-mkdir -p .cursor/skills/loop-engineering/templates/{loop-triage,evaluator-agent,state,github-actions,inbox}
 
-curl -o .cursor/skills/loop-engineering/SKILL.md \
-  $BASE/skills/loop-engineering/SKILL.md
+# Personal (recommended solo): available in all Cursor projects
+SKILL_HOME=~/.cursor/skills/loop-engineering
+
+# Project (recommended teams): commit .cursor/skills/loop-engineering/ to the repo
+# SKILL_HOME=.cursor/skills/loop-engineering
+
+mkdir -p $SKILL_HOME/references
+mkdir -p $SKILL_HOME/templates/{loop-triage,evaluator-agent,state,github-actions,inbox}
+
+curl -o $SKILL_HOME/SKILL.md $BASE/skills/loop-engineering/SKILL.md
 
 for f in five-moves failure-modes toolchain-map; do
-  curl -o .cursor/skills/loop-engineering/references/$f.md \
+  curl -o $SKILL_HOME/references/$f.md \
     $BASE/skills/loop-engineering/references/$f.md
 done
 
-curl -o .cursor/skills/loop-engineering/templates/loop-triage/loop-triage.md \
+curl -o $SKILL_HOME/templates/loop-triage/loop-triage.md \
   $BASE/skills/loop-engineering/templates/loop-triage/loop-triage.md
-curl -o .cursor/skills/loop-engineering/templates/evaluator-agent/loop-reviewer.md \
+curl -o $SKILL_HOME/templates/evaluator-agent/loop-reviewer.md \
   $BASE/skills/loop-engineering/templates/evaluator-agent/loop-reviewer.md
-curl -o .cursor/skills/loop-engineering/templates/state/triage.md \
+curl -o $SKILL_HOME/templates/state/triage.md \
   $BASE/skills/loop-engineering/templates/state/triage.md
-curl -o .cursor/skills/loop-engineering/templates/github-actions/loop-triage.yml \
+curl -o $SKILL_HOME/templates/github-actions/loop-triage.yml \
   $BASE/skills/loop-engineering/templates/github-actions/loop-triage.yml
-curl -o .cursor/skills/loop-engineering/templates/inbox/.gitkeep \
+curl -o $SKILL_HOME/templates/inbox/.gitkeep \
   $BASE/skills/loop-engineering/templates/inbox/.gitkeep
-curl -o .cursor/skills/loop-engineering/templates/loop-checklist.md \
+curl -o $SKILL_HOME/templates/loop-checklist.md \
   $BASE/skills/loop-engineering/templates/loop-checklist.md
 ```
 
-**Claude Code:**
+**Claude Code** — same pattern with `SKILL_HOME`:
 
 ```bash
 BASE=https://raw.githubusercontent.com/$REPO/main
-mkdir -p .claude/skills/loop-engineering/references
-mkdir -p .claude/skills/loop-engineering/templates/{loop-triage,evaluator-agent,state,github-actions,inbox}
 
-curl -o .claude/skills/loop-engineering/SKILL.md \
-  $BASE/skills/loop-engineering/SKILL.md
+# Personal: SKILL_HOME=~/.claude/skills/loop-engineering
+SKILL_HOME=~/.claude/skills/loop-engineering
+
+# Project: SKILL_HOME=.claude/skills/loop-engineering
+
+mkdir -p $SKILL_HOME/references
+mkdir -p $SKILL_HOME/templates/{loop-triage,evaluator-agent,state,github-actions,inbox}
+
+curl -o $SKILL_HOME/SKILL.md $BASE/skills/loop-engineering/SKILL.md
 
 for f in five-moves failure-modes toolchain-map; do
-  curl -o .claude/skills/loop-engineering/references/$f.md \
+  curl -o $SKILL_HOME/references/$f.md \
     $BASE/skills/loop-engineering/references/$f.md
 done
 
-curl -o .claude/skills/loop-engineering/templates/loop-triage/loop-triage.md \
+curl -o $SKILL_HOME/templates/loop-triage/loop-triage.md \
   $BASE/skills/loop-engineering/templates/loop-triage/loop-triage.md
-curl -o .claude/skills/loop-engineering/templates/evaluator-agent/loop-reviewer.md \
+curl -o $SKILL_HOME/templates/evaluator-agent/loop-reviewer.md \
   $BASE/skills/loop-engineering/templates/evaluator-agent/loop-reviewer.md
-curl -o .claude/skills/loop-engineering/templates/state/triage.md \
+curl -o $SKILL_HOME/templates/state/triage.md \
   $BASE/skills/loop-engineering/templates/state/triage.md
-curl -o .claude/skills/loop-engineering/templates/github-actions/loop-triage.yml \
+curl -o $SKILL_HOME/templates/github-actions/loop-triage.yml \
   $BASE/skills/loop-engineering/templates/github-actions/loop-triage.yml
-curl -o .claude/skills/loop-engineering/templates/inbox/.gitkeep \
+curl -o $SKILL_HOME/templates/inbox/.gitkeep \
   $BASE/skills/loop-engineering/templates/inbox/.gitkeep
-curl -o .claude/skills/loop-engineering/templates/loop-checklist.md \
+curl -o $SKILL_HOME/templates/loop-checklist.md \
   $BASE/skills/loop-engineering/templates/loop-checklist.md
 ```
 
